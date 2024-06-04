@@ -4,29 +4,29 @@ set -e -o pipefail
 # The signals we're trapping.
 TRAP_SIGNALS=(SIGHUP SIGINT SIGQUIT SIGUSR1 SIGUSR2 SIGPIPE SIGTERM)
 
-# When receiving one of the above signals, send $KILL_SIGNAL to the entire
-# process tree. Notice that we must NOT use SIGINT here (and we also must not
-# propagate the original signal since it may be SIGINT) due to how shells (e.g.
-# bash) handle SIGINT. Sending SIGINT to a process tree naively doesn't stop all
-# of them. See here, why: https://www.cons.org/cracauer/sigint.html
+# The signal used to terminate processes.
 KILL_SIGNAL=SIGTERM
-WAIT_BEFORE_KILL=10
 
 if [[ "$1" == "--inner" ]]; then
   shift
 
   handler() {
     signal="$1"
-    trap - "${TRAP_SIGNALS[@]}"
-    echo "$(date): signal-fanout received $signal, killing processes of the current session with $KILL_SIGNAL:"
+    echo "$(date): signal-fanout received $signal, propagating signal to all processes in the session:"
     ps -o pid,sess,pgid,command -p $(pgrep -s0)
-    pkill "-$KILL_SIGNAL" -s0
+    pkill "-$signal" -s0
 
-    # Wait for a short period to give processes time to terminate
-    sleep $WAIT_BEFORE_KILL
+    if [[ "$signal" == "SIGINT" ]]; then
+      # Give processes time to terminate gracefully
+      sleep 7.5
+      echo "$(date): sending $KILL_SIGNAL to all processes in the session:"
+      pkill "-$KILL_SIGNAL" -s0
 
-    # Force kill remaining processes if any
-    pkill -9 -s0
+      # Wait a bit more before force killing
+      sleep 2.5
+      echo "$(date): sending SIGKILL to all processes in the session:"
+      pkill -9 -s0
+    fi
   }
 
   for signal in "${TRAP_SIGNALS[@]}"; do
