@@ -21,16 +21,21 @@ if [[ "$1" == "--inner" ]]; then
     ps -o pid,sess,pgid,command -p $(pgrep -s0)
     pkill "-$KILL_SIGNAL" -s0
     sleep 1  # Give processes time to receive the signal
+
+    # Wait for up to 20 seconds for all processes to terminate
     SECONDS=0
-    while pkill -0 -s0 && [ $SECONDS -lt 20 ]; do
-      echo "Waiting for processes to terminate... $SECONDS seconds elapsed"
+    while pkill -0 -s0 2>/dev/null && [ $SECONDS -lt 20 ]; do
+      echo "$(date): waiting for processes to terminate... $SECONDS seconds elapsed"
       sleep 1
     done
-    if pkill -0 -s0; then
-      echo "Force killing remaining processes..."
-      pkill -9 -s0  # Force kill if still running after 20 seconds
+
+    # Force kill if still running after 20 seconds
+    if pkill -0 -s0 2>/dev/null; then
+      echo "$(date): force killing remaining processes..."
+      pkill -9 -s0
     fi
   }
+
   for signal in "${TRAP_SIGNALS[@]}"; do
     # shellcheck disable=SC2064
     trap "handler $signal" "$signal"
