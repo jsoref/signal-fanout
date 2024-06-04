@@ -20,22 +20,7 @@ if [[ "$1" == "--inner" ]]; then
     echo "$(date): signal-fanout received $signal, killing processes of the current session with $KILL_SIGNAL:"
     ps -o pid,sess,pgid,command -p $(pgrep -s0)
     pkill "-$KILL_SIGNAL" -s0
-    sleep 3  # Give processes time to receive the signal
-
-    # Wait for up to 20 seconds for all processes to terminate
-    SECONDS=0
-    while pkill -0 -s0 2>/dev/null && [ $SECONDS -lt 20 ]; do
-      echo "$(date): waiting for processes to terminate... $SECONDS seconds elapsed"
-      sleep 1
-    done
-
-    # Force kill if still running after 20 seconds
-    if pkill -0 -s0 2>/dev/null; then
-      echo "$(date): force killing remaining processes..."
-      pkill -9 -s0
-    fi
   }
-
   for signal in "${TRAP_SIGNALS[@]}"; do
     # shellcheck disable=SC2064
     trap "handler $signal" "$signal"
@@ -51,6 +36,12 @@ if [[ "$1" == "--inner" ]]; then
     # Just a script file name is passed, e.g. "signal-fanout {0}".
     bash "$@" & wait $!
   fi
+
+  # Wait for all child processes to finish before exiting
+  while kill -0 $(pgrep -s0) 2>/dev/null; do
+    sleep 1
+  done
+
 else
   if [[ "$1" == "" ]]; then
     echo "Usage examples:"
