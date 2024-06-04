@@ -31,9 +31,18 @@ if [[ "$1" == "--inner" ]]; then
     fi
   }
 
+  trap_handler() {
+    # Set a lock to prevent multiple invocations
+    if [[ -n "${HANDLER_LOCK:-}" ]]; then
+      return
+    fi
+    HANDLER_LOCK=1
+    handler "$@"
+  }
+
   for signal in "${TRAP_SIGNALS[@]}"; do
     # shellcheck disable=SC2064
-    trap "handler $signal" "$signal"
+    trap "trap_handler $signal" "$signal"
   done
 
   if [[ -x "$1" ]]; then
