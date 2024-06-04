@@ -10,17 +10,25 @@ TRAP_SIGNALS=(SIGHUP SIGINT SIGQUIT SIGUSR1 SIGUSR2 SIGPIPE SIGTERM)
 # bash) handle SIGINT. Sending SIGINT to a process tree naively doesn't stop all
 # of them. See here, why: https://www.cons.org/cracauer/sigint.html
 KILL_SIGNAL=SIGTERM
+WAIT_BEFORE_KILL=10
 
 if [[ "$1" == "--inner" ]]; then
   shift
 
   handler() {
     signal="$1"
-    trap - "$KILL_SIGNAL"
+    trap - "${TRAP_SIGNALS[@]}"
     echo "$(date): signal-fanout received $signal, killing processes of the current session with $KILL_SIGNAL:"
     ps -o pid,sess,pgid,command -p $(pgrep -s0)
     pkill "-$KILL_SIGNAL" -s0
+
+    # Wait for a short period to give processes time to terminate
+    sleep $WAIT_BEFORE_KILL
+
+    # Force kill remaining processes if any
+    pkill -9 -s0
   }
+
   for signal in "${TRAP_SIGNALS[@]}"; do
     # shellcheck disable=SC2064
     trap "handler $signal" "$signal"
