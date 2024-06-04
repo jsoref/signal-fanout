@@ -19,12 +19,12 @@ if [[ "$1" == "--inner" ]]; then
     pkill "-$signal" -s0
 
     if [[ "$signal" == "SIGINT" ]]; then
-      # Give processes time to terminate gracefully
+      echo "$(date): waiting 7.5 seconds for processes to terminate gracefully"
       sleep 7.5
       echo "$(date): sending $KILL_SIGNAL to all processes in the session:"
       pkill "-$KILL_SIGNAL" -s0
 
-      # Wait a bit more before force killing
+      echo "$(date): waiting 2.5 seconds before force killing processes"
       sleep 2.5
       echo "$(date): sending SIGKILL to all processes in the session:"
       pkill -9 -s0
