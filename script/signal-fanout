@@ -14,6 +14,8 @@ if [[ "$1" == "--inner" ]]; then
     signal="$1"
     echo "$(date): signal-fanout received $signal, propagating signal to all processes in the session:"
     ps -o pid,sess,pgid,command -p $(pgrep -s0)
+
+    # Propagate the signal to all processes in the session
     pkill "-$signal" -s0
 
     if [[ "$signal" == "SIGINT" ]]; then
@@ -36,14 +38,16 @@ if [[ "$1" == "--inner" ]]; then
 
   if [[ -x "$1" ]]; then
     # Full executable name is passed, e.g. "signal-fanout /bin/zsh {0}".
-    "$@" & wait $!
+    "$@" &
   elif [[ ! -f "$1" ]] && which "$1" &>/dev/null; then
     # Shell name is passed, e.g. "signal-fanout zsh {0}".
-    "$@" & wait $!
+    "$@" &
   else
     # Just a script file name is passed, e.g. "signal-fanout {0}".
-    bash "$@" & wait $!
+    bash "$@" &
   fi
+
+  wait
 
   # Wait for all child processes to finish before exiting
   while kill -0 $(pgrep -s0) 2>/dev/null; do
