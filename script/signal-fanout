@@ -20,7 +20,7 @@ if [[ "$1" == "--inner" ]]; then
     echo "$(date): signal-fanout received $signal, killing processes of the current session with $KILL_SIGNAL:"
     ps -o pid,sess,pgid,command -p $(pgrep -s0)
     pkill "-$KILL_SIGNAL" -s0
-    sleep 1  # Give processes time to receive the signal
+    sleep 3  # Give processes time to receive the signal
 
     # Wait for up to 20 seconds for all processes to terminate
     SECONDS=0
