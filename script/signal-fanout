@@ -19,30 +19,21 @@ if [[ "$1" == "--inner" ]]; then
     pkill "-$signal" -s0
 
     if [[ "$signal" == "SIGINT" ]]; then
-      echo "$(date): waiting 20 seconds for processes to terminate gracefully"
-      sleep 20
+      echo "$(date): waiting 7.5 seconds for processes to terminate gracefully"
+      sleep 7.5
       echo "$(date): sending $KILL_SIGNAL to all processes in the session:"
       pkill "-$KILL_SIGNAL" -s0
 
-      echo "$(date): waiting 5 seconds before force killing processes"
-      sleep 5
+      echo "$(date): waiting 2.5 seconds before force killing processes"
+      sleep 2.5
       echo "$(date): sending SIGKILL to all processes in the session:"
       pkill -9 -s0
     fi
   }
 
-  trap_handler() {
-    # Set a lock to prevent multiple invocations
-    if [[ -n "${HANDLER_LOCK:-}" ]]; then
-      return
-    fi
-    HANDLER_LOCK=1
-    handler "$@"
-  }
-
   for signal in "${TRAP_SIGNALS[@]}"; do
     # shellcheck disable=SC2064
-    trap "trap_handler $signal" "$signal"
+    trap "handler $signal" "$signal"
   done
 
   if [[ -x "$1" ]]; then
@@ -56,12 +47,8 @@ if [[ "$1" == "--inner" ]]; then
     bash "$@" &
   fi
 
-  wait
-
   # Wait for all child processes to finish before exiting
-  while kill -0 $(pgrep -s0) 2>/dev/null; do
-    sleep 1
-  done
+  wait
 
 else
   if [[ "$1" == "" ]]; then
